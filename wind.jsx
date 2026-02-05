@@ -574,8 +574,8 @@ const leadershipThemes = [
     title: 'Procurement capacity consumed',
     subtitle: 'by low-value, manual work',
     description: 'Manual admin, tracking, approvals, failed self-sourcing and compliance activity consume capacity, limiting focus on strategic value and supplier management.',
-    shape: 'conveyor',
-    motion: 'treadmill',
+    shape: 'sphere',
+    motion: 'futile',
     color: 'maroon',
     row: 'strategic'
   },
@@ -1749,65 +1749,89 @@ case 'orbit':
   velocities[iz] += (Math.sin(orbitAngle) * orbitDist - posArray[iz]) * 0.02;
   velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
   break;
-  case 'treadmill':
-  // Endless horizontal loop - mechanical, repetitive, futile
-  // Particles that fall off are GONE - permanent capacity loss
-  const beltSpeed = 0.5 * motionScale; // Slower, more grinding
-  const beltHalfWidth = 140;
-  const beltY = 30; // Belt level
-  const leakThreshold = 0; // Below this = leaked/falling
+  case 'futile':
+  // Failed formation - particles try to form sphere, repeatedly fail
+  // Frustrating, systemic, quietly exhausting
   
-  const isActive = posArray[iy] > leakThreshold;
+  const targetRadius = 85;
+  const cycleLength = 6.0; // Seconds per attempt
+  const cycleTime = time % cycleLength;
+  const cyclePhase = cycleTime / cycleLength; // 0-1
   
-  if (isActive) {
-    // Constant rightward motion - the grind
-    velocities[ix] += beltSpeed;
+  // Fatigue accumulates over longer period - attempts weaken
+  const fatiguePeriod = 45; // Full fatigue cycle
+  const fatigueLevel = (time % fatiguePeriod) / fatiguePeriod;
+  const fatigueMultiplier = 1.0 - fatigueLevel * 0.5; // Degrades to 50%
+  
+  // Distance from center
+  const dist = Math.sqrt(posArray[ix] ** 2 + (posArray[iy] - 30) ** 2 + posArray[iz] ** 2);
+  
+  // Normalized direction from center
+  const nx = dist > 0.1 ? posArray[ix] / dist : 0;
+  const ny = dist > 0.1 ? (posArray[iy] - 30) / dist : 0;
+  const nz = dist > 0.1 ? posArray[iz] / dist : 0;
+  
+  // Target position on sphere surface (centered at y=30)
+  const tx = nx * targetRadius;
+  const ty = ny * targetRadius + 30;
+  const tz = nz * targetRadius;
+  
+  // Phase 0.0 - 0.55: FORMATION (particles pull toward sphere)
+  // Phase 0.55 - 0.75: DISRUPTION (turbulence scatters them)
+  // Phase 0.75 - 1.0: COLLAPSE (brief settle before next attempt)
+  
+  if (cyclePhase < 0.55) {
+    // FORMING - attract to sphere surface
+    const formProgress = cyclePhase / 0.55;
+    const formStrength = 0.04 * fatigueMultiplier * motionScale;
+    // Ease in/out for organic feel
+    const ease = Math.sin(formProgress * Math.PI * 0.5);
     
-    // Wrap to left edge when reaching right (infinite loop, no progress)
-    if (posArray[ix] > beltHalfWidth) {
-      velocities[ix] -= beltHalfWidth * 2.2;
-    }
+    velocities[ix] += (tx - posArray[ix]) * formStrength * ease;
+    velocities[iy] += (ty - posArray[iy]) * formStrength * ease;
+    velocities[iz] += (tz - posArray[iz]) * formStrength * ease;
     
-    // Mechanical rhythm - slight stutter/jerk pattern
-    const mechanicalPulse = Math.sin(time * 4) * 0.5 + Math.sin(time * 12 + i * 0.002) * 0.2;
-    velocities[ix] += mechanicalPulse * 0.05 * motionScale;
+    // Slight imperfection - never quite stable
+    const wobble = 0.015 * (1 - fatigueMultiplier * 0.3);
+    velocities[ix] += Math.sin(time * 3 + i * 0.01) * wobble;
+    velocities[iy] += Math.cos(time * 2.7 + i * 0.013) * wobble;
+    velocities[iz] += Math.sin(time * 3.3 + i * 0.017) * wobble;
     
-    // Tiny vertical jitter (conveyor vibration)
-    velocities[iy] += Math.sin(time * 15 + i * 0.01) * 0.008;
+  } else if (cyclePhase < 0.75) {
+    // DISRUPTION - turbulence breaks the formation
+    const disruptProgress = (cyclePhase - 0.55) / 0.2;
+    const disruptStrength = Math.sin(disruptProgress * Math.PI) * 0.15 * motionScale;
     
-    // Capacity leak - random particles fall off, never return
-    // Higher chance at edges (particles near z extremes)
-    const edgeFactor = Math.abs(posArray[iz]) / 50;
-    const leakChance = 0.00015 + edgeFactor * 0.0003;
+    // Per-particle noise displacement
+    const noiseScale = 2.5;
+    const px = Math.sin(i * 0.019 + time * noiseScale);
+    const py = Math.sin(i * 0.027 + time * noiseScale * 1.1);
+    const pz = Math.sin(i * 0.023 + time * noiseScale * 0.9);
     
-    if (Math.random() < leakChance) {
-      // Begin falling - mark as leaked
-      velocities[iy] -= 0.5;
-    }
+    velocities[ix] += px * disruptStrength;
+    velocities[iy] += py * disruptStrength;
+    velocities[iz] += pz * disruptStrength;
     
-    // Slight inward pull to keep belt cohesion
-    velocities[iz] -= posArray[iz] * 0.001;
+    // Outward push (partial collapse) - stronger when fatigued
+    const collapseStrength = disruptStrength * 0.6 * (1 + fatigueLevel * 0.8);
+    velocities[ix] += nx * collapseStrength;
+    velocities[iy] += ny * collapseStrength;
+    velocities[iz] += nz * collapseStrength;
     
   } else {
-    // LEAKED PARTICLES - slow descent into oblivion, no return
-    // Gentle gravity - drifting down, slowing
-    velocities[iy] -= 0.025 * motionScale;
-    
-    // Horizontal drift slows (energy draining)
-    velocities[ix] *= 0.995;
-    
-    // Slight outward drift (dispersing)
-    velocities[iz] += (posArray[iz] > 0 ? 1 : -1) * 0.005;
-    
-    // Particles fade by moving further down and slowing
-    // They accumulate at the bottom, dimmer (further from camera)
-    if (posArray[iy] < -200) {
-      // Settle at bottom - nearly still
-      velocities[iy] *= 0.9;
-      velocities[ix] *= 0.95;
-      velocities[iz] *= 0.95;
-    }
+    // COLLAPSE/RESET - brief settling, sluggish
+    // Weak return pull, mostly just drifting
+    const settleStrength = 0.008 * motionScale;
+    velocities[ix] += (tx - posArray[ix]) * settleStrength;
+    velocities[iy] += (ty - posArray[iy]) * settleStrength;
+    velocities[iz] += (tz - posArray[iz]) * settleStrength;
   }
+  
+  // Global damping - tired, sluggish movement
+  const damping = 0.965 - fatigueLevel * 0.02; // More sluggish when fatigued
+  velocities[ix] *= damping;
+  velocities[iy] *= damping;
+  velocities[iz] *= damping;
   break;
   default: // drift - gentle floating movement
               const driftPhase = i * 0.001;

@@ -522,6 +522,112 @@ const shapeGenerators = {
   }
 };
 
+// Leadership Interview Themes
+const leadershipThemes = [
+  // Top row - Strategic (Maroon)
+  {
+    id: 'capacity',
+    title: 'Procurement capacity consumed',
+    subtitle: 'by low-value, manual work',
+    description: 'Manual admin, tracking, approvals, failed self-sourcing and compliance activity consume capacity, limiting focus on strategic value and supplier management.',
+    shape: 'tornado',
+    motion: 'swirl',
+    color: 'maroon',
+    row: 'strategic'
+  },
+  {
+    id: 'fragmented',
+    title: 'Fragmented data prevents',
+    subtitle: 'confident decision-making',
+    description: 'Spend, savings, contracts and risk data sit across multiple systems and trackers, driving rework and low confidence in reporting.',
+    shape: 'scatter',
+    motion: 'drift',
+    color: 'maroon',
+    row: 'strategic'
+  },
+  {
+    id: 'governance',
+    title: 'Governance and risk create',
+    subtitle: 'disproportionate friction',
+    description: 'Controls are necessary but often duplicated, manual and misaligned to value or risk, slowing delivery and increasing effort.',
+    shape: 'spiral',
+    motion: 'tremble',
+    color: 'maroon',
+    row: 'strategic'
+  },
+  {
+    id: 'late',
+    title: 'Procurement is engaged',
+    subtitle: 'too late to shape outcomes',
+    description: 'Late involvement limits the ability to challenge demand, specifications and commercial models, particularly in high-value categories.',
+    shape: 'flame',
+    motion: 'pulse',
+    color: 'maroon',
+    row: 'strategic'
+  },
+  {
+    id: 'disconnected',
+    title: 'Savings tracking and finance',
+    subtitle: 'sign-off are disconnected',
+    description: 'Inconsistent finance processes and systems make benefits tracking manual, slow and value-dilutive.',
+    shape: 'rain',
+    motion: 'drift',
+    color: 'maroon',
+    row: 'strategic'
+  },
+  // Bottom row - Operational (Orange)
+  {
+    id: 'tools',
+    title: 'Tools are reliable but',
+    subtitle: 'not fit for scale',
+    description: 'Core platforms are basic, not well integrated and hard to use, pushing work into Excel and email.',
+    shape: 'mountain',
+    motion: 'breathe',
+    color: 'orange',
+    row: 'operational'
+  },
+  {
+    id: 'thresholds',
+    title: 'Thresholds drive volume',
+    subtitle: 'over material value',
+    description: 'Low approval and governance thresholds pull procurement into large volumes of low-value activity.',
+    shape: 'wave',
+    motion: 'gust',
+    color: 'orange',
+    row: 'operational'
+  },
+  {
+    id: 'onboarding',
+    title: 'Supplier onboarding is',
+    subtitle: 'slow and labour-intensive',
+    description: 'Manual, fragmented onboarding and setup processes create delays and unnecessary workload.',
+    shape: 'cloud',
+    motion: 'drift',
+    color: 'orange',
+    row: 'operational'
+  },
+  {
+    id: 'fatigue',
+    title: 'Change overload creates',
+    subtitle: 'fatigue',
+    description: 'Multiple overlapping initiatives and process changes land unevenly, especially in high-volume teams.',
+    shape: 'human',
+    motion: 'breathe',
+    color: 'orange',
+    row: 'operational'
+  },
+  {
+    id: 'ai',
+    title: 'AI and automation potential',
+    subtitle: 'is under-realised',
+    description: 'There is appetite to automate admin and triage, but data quality, confidence and fit-for-purpose use cases limit adoption.',
+    shape: 'star',
+    motion: 'orbit',
+    color: 'orange',
+    row: 'operational'
+  }
+];
+
 // Color palettes for different moods
 const moodColors = {
   calm: { base: [0.4, 0.6, 0.9], accent: [0.5, 0.7, 1.0] },
@@ -529,6 +635,9 @@ const moodColors = {
   playful: { base: [0.9, 0.6, 0.8], accent: [1.0, 0.7, 0.9] },
   fierce: { base: [1.0, 0.4, 0.2], accent: [1.0, 0.6, 0.3] },
   melancholy: { base: [0.4, 0.45, 0.7], accent: [0.5, 0.55, 0.8] },
+  // Theme colors
+  maroon: { base: [0.55, 0.15, 0.2], accent: [0.7, 0.25, 0.3] },
+  orange: { base: [0.9, 0.5, 0.15], accent: [1.0, 0.6, 0.2] },
   joyful: { base: [1.0, 0.85, 0.3], accent: [1.0, 0.95, 0.5] },
   mysterious: { base: [0.5, 0.3, 0.8], accent: [0.7, 0.4, 0.95] },
   peaceful: { base: [0.3, 0.75, 0.6], accent: [0.4, 0.85, 0.7] },
@@ -546,6 +655,8 @@ export default function TalkToTheWind() {
   const [windMessage, setWindMessage] = useState('');
   const [userMessage, setUserMessage] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState(null);
+  const [showThemeSelector, setShowThemeSelector] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -851,6 +962,30 @@ export default function TalkToTheWind() {
       handleSubmit();
     }
   }, [handleSubmit]);
+
+  // Handle theme selection
+  const selectTheme = useCallback((theme) => {
+    setSelectedTheme(theme);
+    setShowThemeSelector(false);
+    setCurrentShape(theme.shape);
+    setCurrentMood(theme.color);
+    
+    // Trigger morph
+    if (sceneRef.current?.morphTo) {
+      sceneRef.current.morphTo(theme.shape, theme.color);
+    }
+    
+    // Apply motion
+    if (sceneRef.current) {
+      stateRef.current.motion = theme.motion;
+    }
+  }, []);
+
+  // Back to selector
+  const backToSelector = useCallback(() => {
+    setShowThemeSelector(true);
+    setSelectedTheme(null);
+  }, []);
 
   // Refs for voice recognition
   const pendingTranscriptRef = useRef('');
@@ -1634,28 +1769,21 @@ export default function TalkToTheWind() {
     }}>
       {/* Header */}
       <header style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr auto 1fr',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
         borderBottom: '1px solid #333',
-        height: '40px'
+        height: '48px',
+        padding: '0 16px'
       }}>
-        <div style={{ padding: '0 12px', display: 'flex', alignItems: 'center', borderRight: '1px solid #333', fontSize: '10px', letterSpacing: '1px' }}>
-          <div style={{ 
-            width: '8px', 
-            height: '8px', 
-            border: '1px solid #e0e0e0', 
-            borderRadius: '50%', 
-            marginRight: '8px',
-            background: windState !== 'idle' ? '#e0e0e0' : 'transparent',
-            transition: 'background 0.3s'
-          }} />
-          <span>SYS.WIND</span>
+        <div style={{ fontSize: '11px', letterSpacing: '1px', color: '#888' }}>
+          LEADERSHIP INTERVIEW
         </div>
-        <div style={{ padding: '0 12px', display: 'flex', alignItems: 'center', borderRight: '1px solid #333', fontSize: '10px' }}>
-          {currentShape.toUpperCase()}
+        <div style={{ fontSize: '12px', fontWeight: '500', letterSpacing: '0.5px' }}>
+          Emerging Themes
         </div>
-        <div style={{ padding: '0 12px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', fontSize: '10px' }}>
-          <span>.{isLoaded ? currentMood : 'loading'}</span>
+        <div style={{ fontSize: '10px', color: '#666' }}>
+          {selectedTheme ? `${leadershipThemes.indexOf(selectedTheme) + 1}/10` : '10 THEMES'}
         </div>
       </header>
 
@@ -1664,308 +1792,253 @@ export default function TalkToTheWind() {
         position: 'relative',
         flex: 1,
         minHeight: 0,
-        backgroundImage: 'linear-gradient(#222 1px, transparent 1px), linear-gradient(90deg, #222 1px, transparent 1px)',
+        backgroundImage: 'linear-gradient(#1a1a1a 1px, transparent 1px), linear-gradient(90deg, #1a1a1a 1px, transparent 1px)',
         backgroundSize: '40px 40px',
         backgroundPosition: '-1px -1px',
         overflow: 'hidden'
       }}>
         <div ref={containerRef} style={{ position: 'absolute', inset: 0, zIndex: 1 }} />
         
-        {/* Wind's poetic response - centered display */}
-        {(windMessage || userMessage) && (
+        {/* Theme Selector Overlay */}
+        {showThemeSelector && (
           <div style={{
             position: 'absolute',
             inset: 0,
-            zIndex: 3,
+            zIndex: 10,
+            background: 'rgba(0,0,0,0.85)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: isMobile ? '24px' : '60px',
-            pointerEvents: 'none',
-            gap: '24px'
+            padding: isMobile ? '16px' : '32px',
+            animation: 'fadeIn 0.3s ease-out'
           }}>
-            {/* User's question */}
-            {userMessage && (
-              <div style={{
-                fontSize: isMobile ? '12px' : '14px',
-                fontWeight: '400',
-                color: 'rgba(255,255,255,0.5)',
-                textAlign: 'center',
-                letterSpacing: '2px',
-                textTransform: 'uppercase',
-                animation: 'messageAppear 0.5s ease-out forwards'
-              }}>
-                "{userMessage}"
-              </div>
-            )}
-            {/* Wind's response */}
-            {windMessage && (
-              <div style={{
-                fontSize: isMobile ? '16px' : '20px',
-                fontWeight: '300',
-                color: '#fff',
-                textAlign: 'center',
+            <h2 style={{ 
+              fontSize: isMobile ? '14px' : '18px', 
+              marginBottom: '8px', 
+              fontWeight: '400',
+              letterSpacing: '2px',
+              color: '#fff'
+            }}>
+              SELECT A THEME TO EXPLORE
+            </h2>
+            <p style={{ 
+              fontSize: '11px', 
+              color: '#666', 
+              marginBottom: isMobile ? '16px' : '32px',
+              textAlign: 'center'
+            }}>
+              Click any theme to see its particle visualization
+            </p>
+            
+            {/* Strategic Row (Maroon) */}
+            <div style={{ marginBottom: '16px', width: '100%', maxWidth: '900px' }}>
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#8b3a3a', 
+                marginBottom: '8px',
                 letterSpacing: '1px',
-                lineHeight: 1.8,
-                maxWidth: isMobile ? '90%' : '500px',
-                fontStyle: 'italic',
-                animation: 'messageAppear 1s ease-out forwards'
+                paddingLeft: '4px'
               }}>
-                "{windMessage}"
+                STRATEGIC THEMES
               </div>
-            )}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
+                gap: '8px'
+              }}>
+                {leadershipThemes.filter(t => t.row === 'strategic').map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => selectTheme(theme)}
+                    style={{
+                      background: 'rgba(139, 58, 58, 0.15)',
+                      border: '1px solid #8b3a3a',
+                      borderRadius: '4px',
+                      padding: isMobile ? '12px 8px' : '16px 12px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                      color: '#e0e0e0'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(139, 58, 58, 0.35)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(139, 58, 58, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ 
+                      fontSize: isMobile ? '10px' : '11px', 
+                      fontWeight: '500',
+                      lineHeight: 1.3,
+                      marginBottom: '4px'
+                    }}>
+                      {theme.title}
+                    </div>
+                    <div style={{ 
+                      fontSize: isMobile ? '9px' : '10px', 
+                      color: '#999',
+                      lineHeight: 1.2
+                    }}>
+                      {theme.subtitle}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Operational Row (Orange) */}
+            <div style={{ width: '100%', maxWidth: '900px' }}>
+              <div style={{ 
+                fontSize: '10px', 
+                color: '#d97706', 
+                marginBottom: '8px',
+                letterSpacing: '1px',
+                paddingLeft: '4px'
+              }}>
+                OPERATIONAL THEMES
+              </div>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', 
+                gap: '8px'
+              }}>
+                {leadershipThemes.filter(t => t.row === 'operational').map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => selectTheme(theme)}
+                    style={{
+                      background: 'rgba(217, 119, 6, 0.15)',
+                      border: '1px solid #d97706',
+                      borderRadius: '4px',
+                      padding: isMobile ? '12px 8px' : '16px 12px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.2s',
+                      color: '#e0e0e0'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(217, 119, 6, 0.35)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(217, 119, 6, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                  >
+                    <div style={{ 
+                      fontSize: isMobile ? '10px' : '11px', 
+                      fontWeight: '500',
+                      lineHeight: 1.3,
+                      marginBottom: '4px'
+                    }}>
+                      {theme.title}
+                    </div>
+                    <div style={{ 
+                      fontSize: isMobile ? '9px' : '10px', 
+                      color: '#999',
+                      lineHeight: 1.2
+                    }}>
+                      {theme.subtitle}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
-        
-        {/* Small status log */}
-        <div style={{ 
-          position: 'absolute', 
-          bottom: 0, 
-          left: 0,
-          zIndex: 2, 
-          padding: '12px 16px',
-          pointerEvents: 'none'
-        }}>
-          {logMessages.slice(-2).map((log, i) => (
-            <div key={i} style={{ 
-              fontSize: '9px', 
-              color: '#444',
-              marginBottom: '2px'
+
+        {/* Selected Theme Detail (when viewing particle) */}
+        {!showThemeSelector && selectedTheme && (
+          <div style={{
+            position: 'absolute',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            zIndex: 5,
+            background: 'linear-gradient(transparent, rgba(0,0,0,0.9))',
+            padding: isMobile ? '24px 16px 16px' : '48px 32px 24px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{ 
+              maxWidth: '600px',
+              pointerEvents: 'auto'
             }}>
-              {log.type} <span style={{ color: '#666', marginLeft: '6px' }}>{log.text}</span>
+              <div style={{ 
+                display: 'inline-block',
+                fontSize: '9px', 
+                color: selectedTheme.color === 'maroon' ? '#8b3a3a' : '#d97706',
+                marginBottom: '8px',
+                letterSpacing: '2px',
+                padding: '4px 8px',
+                border: `1px solid ${selectedTheme.color === 'maroon' ? '#8b3a3a' : '#d97706'}`,
+                borderRadius: '2px'
+              }}>
+                {selectedTheme.row.toUpperCase()}
+              </div>
+              <h3 style={{ 
+                fontSize: isMobile ? '16px' : '20px', 
+                fontWeight: '400',
+                marginBottom: '4px',
+                color: '#fff',
+                textTransform: 'none'
+              }}>
+                {selectedTheme.title} {selectedTheme.subtitle}
+              </h3>
+              <p style={{ 
+                fontSize: isMobile ? '11px' : '12px', 
+                color: '#888',
+                lineHeight: 1.6,
+                textTransform: 'none',
+                maxWidth: '500px'
+              }}>
+                {selectedTheme.description}
+              </p>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+
+        {/* Back button when viewing theme */}
+        {!showThemeSelector && (
+          <button
+            onClick={backToSelector}
+            style={{
+              position: 'absolute',
+              top: '16px',
+              left: '16px',
+              zIndex: 5,
+              background: 'rgba(0,0,0,0.6)',
+              border: '1px solid #444',
+              borderRadius: '4px',
+              padding: '8px 16px',
+              cursor: 'pointer',
+              color: '#e0e0e0',
+              fontSize: '11px',
+              letterSpacing: '1px',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+            }}
+          >
+            BACK TO THEMES
+          </button>
+        )}
       </main>
-
-      {/* Controls */}
-      <section style={{ borderTop: '1px solid #333', background: '#000', flexShrink: 0 }}>
-        {/* Param group - shows current form and spirit */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderBottom: '1px solid #333' }}>
-          <div style={{ padding: '8px 12px', borderRight: '1px solid #333', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#555' }}>FORM</span>
-            <span>{currentShape.toUpperCase()}</span>
-          </div>
-          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ color: '#555' }}>SPIRIT</span>
-            <span>{currentMood.toUpperCase()}</span>
-          </div>
-        </div>
-
-        {/* Sliders */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '40px 40px 1fr',
-          height: '40px',
-          alignItems: 'center',
-          borderBottom: '1px solid #333'
-        }}>
-          <span style={{ paddingLeft: '12px', color: '#555', fontSize: '10px' }}>TUR</span>
-          <span style={{ textAlign: 'right', paddingRight: '8px' }}>{String(turbulence).padStart(2, '0')}</span>
-          <div style={{ padding: '0 16px', position: 'relative' }}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={turbulence}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setTurbulence(val);
-                stateRef.current.turbulence = val / 100;
-              }}
-              style={{ width: '100%', height: '12px', background: 'transparent', WebkitAppearance: 'none', cursor: 'pointer' }}
-              className="synth-slider"
-            />
-          </div>
-        </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '40px 40px 1fr',
-          height: '40px',
-          alignItems: 'center',
-          borderBottom: '1px solid #333'
-        }}>
-          <span style={{ paddingLeft: '12px', color: '#555', fontSize: '10px' }}>VEL</span>
-          <span style={{ textAlign: 'right', paddingRight: '8px' }}>{String(velocity).padStart(2, '0')}</span>
-          <div style={{ padding: '0 16px', position: 'relative' }}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={velocity}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setVelocity(val);
-                stateRef.current.velocity = val / 100;
-              }}
-              style={{ width: '100%', height: '12px', background: 'transparent', WebkitAppearance: 'none', cursor: 'pointer' }}
-              className="synth-slider"
-            />
-          </div>
-        </div>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '40px 40px 1fr',
-          height: '40px',
-          alignItems: 'center',
-          borderBottom: '1px solid #333'
-        }}>
-          <span style={{ paddingLeft: '12px', color: '#555', fontSize: '10px' }}>RES</span>
-          <span style={{ textAlign: 'right', paddingRight: '8px' }}>{String(resonance).padStart(2, '0')}</span>
-          <div style={{ padding: '0 16px', position: 'relative' }}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={resonance}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setResonance(val);
-                stateRef.current.resonance = val / 100;
-              }}
-              style={{ width: '100%', height: '12px', background: 'transparent', WebkitAppearance: 'none', cursor: 'pointer' }}
-              className="synth-slider"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Input area */}
-      <form 
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSubmit();
-        }}
-        style={{
-          minHeight: '50px',
-          display: 'grid',
-          gridTemplateColumns: '50px 1fr 60px',
-          borderTop: '1px solid #333',
-          flexShrink: 0,
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)'
-        }}
-      >
-        {/* Microphone button */}
-        <button
-          type="button"
-          onClick={toggleVoiceInput}
-          disabled={!voiceSupported || isProcessing}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: isListeningVoice ? 'rgba(255, 100, 100, 0.2)' : 'transparent',
-            border: 'none',
-            borderRight: '1px solid #333',
-            color: !voiceSupported ? '#333' : isListeningVoice ? '#ff6b6b' : '#e0e0e0',
-            fontFamily: '"Space Mono", "Courier New", monospace',
-            fontSize: '18px',
-            cursor: !voiceSupported || isProcessing ? 'default' : 'pointer',
-            transition: 'all 0.2s',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation',
-            animation: isListeningVoice ? 'pulse 1.5s infinite' : 'none'
-          }}
-        >
-          {isListeningVoice ? '●' : '◉'}
-        </button>
-        <input
-          type="text"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          placeholder={isListeningVoice ? "> LISTENING..." : "> TYPE OR TAP MIC..."}
-          disabled={isProcessing || isListeningVoice}
-          autoComplete="off"
-          autoCorrect="off"
-          autoCapitalize="off"
-          spellCheck="false"
-          enterKeyHint="send"
-          style={{
-            background: isProcessing ? 'rgba(255,255,255,0.02)' : isListeningVoice ? 'rgba(255, 100, 100, 0.05)' : 'transparent',
-            border: 'none',
-            borderRight: '1px solid #333',
-            color: '#e0e0e0',
-            fontFamily: '"Space Mono", "Courier New", monospace',
-            fontSize: '16px',
-            padding: '0 16px',
-            textTransform: 'uppercase',
-            outline: 'none',
-            transition: 'background 0.2s',
-            WebkitAppearance: 'none',
-            borderRadius: 0
-          }}
-        />
-        <button
-          type="submit"
-          disabled={isProcessing || isListeningVoice}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'transparent',
-            border: 'none',
-            color: isProcessing || isListeningVoice ? '#555' : '#e0e0e0',
-            fontFamily: '"Space Mono", "Courier New", monospace',
-            fontSize: '16px',
-            cursor: isProcessing || isListeningVoice ? 'default' : 'pointer',
-            transition: 'color 0.2s',
-            WebkitTapHighlightColor: 'transparent',
-            touchAction: 'manipulation'
-          }}
-        >
-          [TX]
-        </button>
-      </form>
 
       <style>{`
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(5px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes messageAppear {
-          0% { opacity: 0; transform: scale(0.9) translateY(20px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        .synth-slider::-webkit-slider-runnable-track {
-          width: 100%;
-          height: 1px;
-          background: #555;
-        }
-        .synth-slider::-webkit-slider-thumb {
-          height: 12px;
-          width: 12px;
-          border-radius: 50%;
-          background: #000;
-          border: 1px solid #e0e0e0;
-          -webkit-appearance: none;
-          margin-top: -5.5px;
-        }
-        .synth-slider::-moz-range-track {
-          width: 100%;
-          height: 1px;
-          background: #555;
-        }
-        .synth-slider::-moz-range-thumb {
-          height: 12px;
-          width: 12px;
-          border-radius: 50%;
-          background: #000;
-          border: 1px solid #e0e0e0;
-        }
-        input::placeholder {
-          color: #555;
-        }
-        input:focus {
-          background: rgba(255,255,255,0.03);
-        }
         button:active {
-          background: #e0e0e0;
-          color: #000;
+          opacity: 0.8;
         }
       `}</style>
     </div>

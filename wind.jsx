@@ -1749,90 +1749,74 @@ case 'orbit':
   velocities[iz] += (Math.sin(orbitAngle) * orbitDist - posArray[iz]) * 0.02;
   velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
   break;
-  case 'futile':
+case 'futile': {
   // Failed formation - particles try to form sphere, repeatedly fail
   // Frustrating, systemic, quietly exhausting
   
-  const targetRadius = 85;
-  const cycleLength = 6.0; // Seconds per attempt
-  const cycleTime = time % cycleLength;
-  const cyclePhase = cycleTime / cycleLength; // 0-1
+  const fTargetRadius = 85;
+  const fCycleLength = 6.0;
+  const fCycleTime = time % fCycleLength;
+  const fCyclePhase = fCycleTime / fCycleLength;
   
-  // Fatigue accumulates over longer period - attempts weaken
-  const fatiguePeriod = 45; // Full fatigue cycle
-  const fatigueLevel = (time % fatiguePeriod) / fatiguePeriod;
-  const fatigueMultiplier = 1.0 - fatigueLevel * 0.5; // Degrades to 50%
+  const fFatiguePeriod = 45;
+  const fFatigueLevel = (time % fFatiguePeriod) / fFatiguePeriod;
+  const fFatigueMult = 1.0 - fFatigueLevel * 0.5;
   
-  // Distance from center
-  const dist = Math.sqrt(posArray[ix] ** 2 + (posArray[iy] - 30) ** 2 + posArray[iz] ** 2);
+  const fDist = Math.sqrt(posArray[ix] ** 2 + (posArray[iy] - 30) ** 2 + posArray[iz] ** 2);
   
-  // Normalized direction from center
-  const nx = dist > 0.1 ? posArray[ix] / dist : 0;
-  const ny = dist > 0.1 ? (posArray[iy] - 30) / dist : 0;
-  const nz = dist > 0.1 ? posArray[iz] / dist : 0;
+  const fNx = fDist > 0.1 ? posArray[ix] / fDist : 0;
+  const fNy = fDist > 0.1 ? (posArray[iy] - 30) / fDist : 0;
+  const fNz = fDist > 0.1 ? posArray[iz] / fDist : 0;
   
-  // Target position on sphere surface (centered at y=30)
-  const tx = nx * targetRadius;
-  const ty = ny * targetRadius + 30;
-  const tz = nz * targetRadius;
+  const fTx = fNx * fTargetRadius;
+  const fTy = fNy * fTargetRadius + 30;
+  const fTz = fNz * fTargetRadius;
   
-  // Phase 0.0 - 0.55: FORMATION (particles pull toward sphere)
-  // Phase 0.55 - 0.75: DISRUPTION (turbulence scatters them)
-  // Phase 0.75 - 1.0: COLLAPSE (brief settle before next attempt)
-  
-  if (cyclePhase < 0.55) {
-    // FORMING - attract to sphere surface
-    const formProgress = cyclePhase / 0.55;
-    const formStrength = 0.04 * fatigueMultiplier * motionScale;
-    // Ease in/out for organic feel
+  if (fCyclePhase < 0.55) {
+    const formProgress = fCyclePhase / 0.55;
+    const formStrength = 0.04 * fFatigueMult * motionScale;
     const ease = Math.sin(formProgress * Math.PI * 0.5);
     
-    velocities[ix] += (tx - posArray[ix]) * formStrength * ease;
-    velocities[iy] += (ty - posArray[iy]) * formStrength * ease;
-    velocities[iz] += (tz - posArray[iz]) * formStrength * ease;
+    velocities[ix] += (fTx - posArray[ix]) * formStrength * ease;
+    velocities[iy] += (fTy - posArray[iy]) * formStrength * ease;
+    velocities[iz] += (fTz - posArray[iz]) * formStrength * ease;
     
-    // Slight imperfection - never quite stable
-    const wobble = 0.015 * (1 - fatigueMultiplier * 0.3);
+    const wobble = 0.015 * (1 - fFatigueMult * 0.3);
     velocities[ix] += Math.sin(time * 3 + i * 0.01) * wobble;
     velocities[iy] += Math.cos(time * 2.7 + i * 0.013) * wobble;
     velocities[iz] += Math.sin(time * 3.3 + i * 0.017) * wobble;
     
-  } else if (cyclePhase < 0.75) {
-    // DISRUPTION - turbulence breaks the formation
-    const disruptProgress = (cyclePhase - 0.55) / 0.2;
+  } else if (fCyclePhase < 0.75) {
+    const disruptProgress = (fCyclePhase - 0.55) / 0.2;
     const disruptStrength = Math.sin(disruptProgress * Math.PI) * 0.15 * motionScale;
     
-    // Per-particle noise displacement
-    const noiseScale = 2.5;
-    const px = Math.sin(i * 0.019 + time * noiseScale);
-    const py = Math.sin(i * 0.027 + time * noiseScale * 1.1);
-    const pz = Math.sin(i * 0.023 + time * noiseScale * 0.9);
+    const fNoiseScale = 2.5;
+    const fpx = Math.sin(i * 0.019 + time * fNoiseScale);
+    const fpy = Math.sin(i * 0.027 + time * fNoiseScale * 1.1);
+    const fpz = Math.sin(i * 0.023 + time * fNoiseScale * 0.9);
     
-    velocities[ix] += px * disruptStrength;
-    velocities[iy] += py * disruptStrength;
-    velocities[iz] += pz * disruptStrength;
+    velocities[ix] += fpx * disruptStrength;
+    velocities[iy] += fpy * disruptStrength;
+    velocities[iz] += fpz * disruptStrength;
     
-    // Outward push (partial collapse) - stronger when fatigued
-    const collapseStrength = disruptStrength * 0.6 * (1 + fatigueLevel * 0.8);
-    velocities[ix] += nx * collapseStrength;
-    velocities[iy] += ny * collapseStrength;
-    velocities[iz] += nz * collapseStrength;
+    const collapseStrength = disruptStrength * 0.6 * (1 + fFatigueLevel * 0.8);
+    velocities[ix] += fNx * collapseStrength;
+    velocities[iy] += fNy * collapseStrength;
+    velocities[iz] += fNz * collapseStrength;
     
   } else {
-    // COLLAPSE/RESET - brief settling, sluggish
-    // Weak return pull, mostly just drifting
     const settleStrength = 0.008 * motionScale;
-    velocities[ix] += (tx - posArray[ix]) * settleStrength;
-    velocities[iy] += (ty - posArray[iy]) * settleStrength;
-    velocities[iz] += (tz - posArray[iz]) * settleStrength;
+    velocities[ix] += (fTx - posArray[ix]) * settleStrength;
+    velocities[iy] += (fTy - posArray[iy]) * settleStrength;
+    velocities[iz] += (fTz - posArray[iz]) * settleStrength;
   }
   
-  // Global damping - tired, sluggish movement
-  const damping = 0.965 - fatigueLevel * 0.02; // More sluggish when fatigued
-  velocities[ix] *= damping;
-  velocities[iy] *= damping;
-  velocities[iz] *= damping;
+  const fDamping = 0.965 - fFatigueLevel * 0.02;
+  velocities[ix] *= fDamping;
+  velocities[iy] *= fDamping;
+  velocities[iz] *= fDamping;
   break;
+}
   default: // drift - gentle floating movement
               const driftPhase = i * 0.001;
               velocities[iy] += Math.sin(time * 0.7 + driftPhase) * 0.025 * motionScale;

@@ -43,6 +43,74 @@ const shapeGenerators = {
     return positions.slice(0, count);
   },
 
+  // Multiple workers - 3 human figures showing collective labor/fatigue
+  workers: (count) => {
+    const positions = [];
+    const offsets = [-120, 0, 120]; // 3 figures spaced horizontally
+    const scale = 0.7; // Slightly smaller to fit 3
+    const particlesPerFigure = Math.floor(count / 3);
+    
+    offsets.forEach((offsetX, figureIndex) => {
+      const figureCount = figureIndex === 1 ? particlesPerFigure + (count % 3) : particlesPerFigure;
+      
+      // Head
+      for (let i = 0; i < figureCount * 0.12; i++) {
+        const theta = Math.random() * Math.PI * 2;
+        const phi = Math.acos(2 * Math.random() - 1);
+        const r = (25 + Math.random() * 4) * scale;
+        positions.push([
+          r * Math.sin(phi) * Math.cos(theta) + offsetX,
+          r * Math.sin(phi) * Math.sin(theta) + 100 * scale,
+          r * Math.cos(phi)
+        ]);
+      }
+      // Torso
+      for (let i = 0; i < figureCount * 0.35; i++) {
+        const y = Math.random() * 70 * scale + 15 * scale;
+        const angle = Math.random() * Math.PI * 2;
+        const radiusX = (30 + Math.sin(y * 0.07) * 8) * scale;
+        positions.push([
+          Math.cos(angle) * radiusX + offsetX,
+          y,
+          Math.sin(angle) * 18 * scale
+        ]);
+      }
+      // Arms (slightly drooped to show fatigue)
+      for (let i = 0; i < figureCount * 0.2; i++) {
+        const t = Math.random();
+        const side = i < figureCount * 0.1 ? -1 : 1;
+        const armDroop = t * 0.3; // Arms droop more at the ends
+        positions.push([
+          side * (40 + t * 50) * scale + offsetX,
+          (65 - t * 45 - armDroop * 20) * scale, // Drooping arms
+          (Math.random() - 0.5) * 15 * scale
+        ]);
+      }
+      // Legs
+      for (let i = 0; i < figureCount * 0.3; i++) {
+        const t = Math.random();
+        const side = i < figureCount * 0.15 ? -1 : 1;
+        positions.push([
+          side * 16 * scale + offsetX,
+          (15 - t * 95) * scale,
+          (Math.random() - 0.5) * 18 * scale
+        ]);
+      }
+    });
+    
+    // Fill remaining with scattered particles (representing dissipating energy)
+    while (positions.length < count) {
+      const figureIndex = Math.floor(Math.random() * 3);
+      const offsetX = offsets[figureIndex];
+      positions.push([
+        (Math.random() - 0.5) * 80 + offsetX,
+        Math.random() * 140 - 60,
+        (Math.random() - 0.5) * 50
+      ]);
+    }
+    return positions.slice(0, count);
+  },
+
   heart: (count) => {
     const positions = [];
     for (let i = 0; i < count; i++) {
@@ -530,8 +598,8 @@ const leadershipThemes = [
     title: 'Procurement capacity consumed',
     subtitle: 'by low-value, manual work',
     description: 'Manual admin, tracking, approvals, failed self-sourcing and compliance activity consume capacity, limiting focus on strategic value and supplier management.',
-    shape: 'tornado',
-    motion: 'swirl',
+    shape: 'workers',
+    motion: 'fragment',
     color: 'maroon',
     row: 'strategic'
   },
@@ -1697,15 +1765,45 @@ export default function TalkToTheWind() {
                 velocities[iz] += (posArray[iz] / pulseDist) * pulse * motionScale;
               }
               break;
-            case 'orbit':
-              const orbitSpeed = 0.01 + vel * 0.02;
-              const orbitAngle = Math.atan2(posArray[iz], posArray[ix]) + orbitSpeed;
-              const orbitDist = Math.sqrt(posArray[ix] ** 2 + posArray[iz] ** 2);
-              velocities[ix] += (Math.cos(orbitAngle) * orbitDist - posArray[ix]) * 0.02;
-              velocities[iz] += (Math.sin(orbitAngle) * orbitDist - posArray[iz]) * 0.02;
-              velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
-              break;
-            default: // drift - gentle floating movement
+case 'orbit':
+  const orbitSpeed = 0.01 + vel * 0.02;
+  const orbitAngle = Math.atan2(posArray[iz], posArray[ix]) + orbitSpeed;
+  const orbitDist = Math.sqrt(posArray[ix] ** 2 + posArray[iz] ** 2);
+  velocities[ix] += (Math.cos(orbitAngle) * orbitDist - posArray[ix]) * 0.02;
+  velocities[iz] += (Math.sin(orbitAngle) * orbitDist - posArray[iz]) * 0.02;
+  velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
+  break;
+  case 'fragment':
+  // Particles periodically drift outward then slowly return - energy drain effect
+  const fragmentCycle = Math.sin(time * 0.3 + i * 0.0002); // Slow wave per particle
+  const fragmentPhase = Math.sin(time * 0.5 + i * 0.001);
+  const isExhaling = fragmentCycle > 0; // Exhale = drift out, inhale = return
+  
+  // Get direction from center of the figure this particle belongs to
+  const figureOffset = posArray[ix] < -60 ? -120 : posArray[ix] > 60 ? 120 : 0;
+  const localX = posArray[ix] - figureOffset;
+  const localDist = Math.sqrt(localX ** 2 + posArray[iy] ** 2 + posArray[iz] ** 2);
+  
+  if (localDist > 0) {
+    if (isExhaling) {
+      // Drift outward and slightly downward (fatigue/drain)
+      const exhaustion = 0.08 * motionScale * (0.5 + Math.random() * 0.5);
+      velocities[ix] += (localX / localDist) * exhaustion * fragmentPhase;
+      velocities[iy] += ((posArray[iy] / localDist) * exhaustion - 0.02) * fragmentPhase; // Slight droop
+      velocities[iz] += (posArray[iz] / localDist) * exhaustion * fragmentPhase;
+    } else {
+      // Slowly return but never fully recover (persistent drain)
+      const recovery = 0.03 * motionScale;
+      velocities[ix] -= (localX / localDist) * recovery * 0.5;
+      velocities[iy] -= ((posArray[iy] / localDist) * recovery * 0.3);
+      velocities[iz] -= (posArray[iz] / localDist) * recovery * 0.5;
+    }
+  }
+  // Add subtle trembling (stress/strain)
+  velocities[ix] += (Math.random() - 0.5) * 0.04 * motionScale;
+  velocities[iy] += (Math.random() - 0.5) * 0.03 * motionScale;
+  break;
+  default: // drift - gentle floating movement
               const driftPhase = i * 0.001;
               velocities[iy] += Math.sin(time * 0.7 + driftPhase) * 0.025 * motionScale;
               velocities[ix] += Math.cos(time * 0.4 + driftPhase) * 0.015 * motionScale;

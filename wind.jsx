@@ -43,40 +43,44 @@ const shapeGenerators = {
     return positions.slice(0, count);
   },
 
-  // Conveyor belt - endless loop, particles peeling off (capacity drain)
+  // Conveyor belt - endless loop, particles leak off (capacity drain)
   conveyor: (count) => {
     const positions = [];
-    const beltWidth = 280;
-    const beltHeight = 35;
-    const lanes = 4;
-    const laneSpacing = 30;
+    const beltHalfWidth = 140;
+    const beltY = 30;
+    const beltThickness = 25; // Vertical spread on belt
+    const lanes = 5;
+    const laneSpacing = 22;
+    const totalZ = laneSpacing * (lanes - 1);
     
-    // Main belt particles - horizontal stream
-    const beltParticles = Math.floor(count * 0.65);
+    // 85% on the active belt - dense, flowing mass
+    const beltParticles = Math.floor(count * 0.85);
     for (let i = 0; i < beltParticles; i++) {
       const lane = Math.floor(Math.random() * lanes);
       const laneZ = (lane - (lanes - 1) / 2) * laneSpacing;
-      const x = (Math.random() - 0.5) * beltWidth;
-      const y = 30 + (Math.random() - 0.5) * beltHeight; // Centered at y=30
-      positions.push([x, y, laneZ]);
-    }
-    
-    // Particles falling off the belt (capacity loss)
-    const fallingParticles = Math.floor(count * 0.25);
-    for (let i = 0; i < fallingParticles; i++) {
-      const fallProgress = Math.random();
-      const x = (Math.random() - 0.5) * beltWidth * 0.8;
-      const y = 30 - 20 - fallProgress * 120; // Falling below belt
-      const z = (Math.random() - 0.5) * laneSpacing * lanes;
+      // Add slight z variation within lane
+      const z = laneZ + (Math.random() - 0.5) * laneSpacing * 0.5;
+      const x = (Math.random() - 0.5) * beltHalfWidth * 2;
+      const y = beltY + (Math.random() - 0.5) * beltThickness;
       positions.push([x, y, z]);
     }
     
-    // Accumulated "waste" at bottom
+    // 10% already leaked - drifting below
+    const leakedParticles = Math.floor(count * 0.10);
+    for (let i = 0; i < leakedParticles; i++) {
+      const depth = Math.random(); // 0 = just fell, 1 = deep
+      const x = (Math.random() - 0.5) * beltHalfWidth * 1.5;
+      const y = -10 - depth * 150; // Spread from just below belt to deep
+      const z = (Math.random() - 0.5) * totalZ * 1.3; // Spread wider as they fall
+      positions.push([x, y, z]);
+    }
+    
+    // 5% settled at bottom - nearly still, faded
     while (positions.length < count) {
       positions.push([
-        (Math.random() - 0.5) * beltWidth * 0.6,
-        -100 - Math.random() * 40,
-        (Math.random() - 0.5) * laneSpacing * lanes * 0.8
+        (Math.random() - 0.5) * beltHalfWidth * 1.2,
+        -180 - Math.random() * 50,
+        (Math.random() - 0.5) * totalZ * 1.5
       ]);
     }
     
@@ -1746,43 +1750,62 @@ case 'orbit':
   velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
   break;
   case 'treadmill':
-  // Endless horizontal motion - particles loop, some fall off
-  const beltSpeed = 0.8 * motionScale;
-  const beltWidth = 140; // Half-width for wrap detection
-  const fallThreshold = -30; // Y level where particles are "falling"
+  // Endless horizontal loop - mechanical, repetitive, futile
+  // Particles that fall off are GONE - permanent capacity loss
+  const beltSpeed = 0.5 * motionScale; // Slower, more grinding
+  const beltHalfWidth = 140;
+  const beltY = 30; // Belt level
+  const leakThreshold = 0; // Below this = leaked/falling
   
-  // Check if particle is on the belt or falling
-  const isOnBelt = posArray[iy] > fallThreshold;
+  const isActive = posArray[iy] > leakThreshold;
   
-  if (isOnBelt) {
-    // Move forward on the belt
+  if (isActive) {
+    // Constant rightward motion - the grind
     velocities[ix] += beltSpeed;
     
-    // Wrap around when reaching edge (creates loop illusion)
-    if (posArray[ix] > beltWidth) {
-      // Teleport to other side (handled via large negative velocity)
-      velocities[ix] -= beltWidth * 2.5;
+    // Wrap to left edge when reaching right (infinite loop, no progress)
+    if (posArray[ix] > beltHalfWidth) {
+      velocities[ix] -= beltHalfWidth * 2.2;
     }
     
-    // Random chance to "fall off" - capacity loss
-    const fallChance = 0.0004 + (Math.abs(posArray[iz]) > 40 ? 0.001 : 0); // Edge particles fall more
-    if (Math.random() < fallChance) {
-      velocities[iy] -= 2.0; // Start falling
-      velocities[ix] += (Math.random() - 0.5) * 0.5; // Slight sideways drift
+    // Mechanical rhythm - slight stutter/jerk pattern
+    const mechanicalPulse = Math.sin(time * 4) * 0.5 + Math.sin(time * 12 + i * 0.002) * 0.2;
+    velocities[ix] += mechanicalPulse * 0.05 * motionScale;
+    
+    // Tiny vertical jitter (conveyor vibration)
+    velocities[iy] += Math.sin(time * 15 + i * 0.01) * 0.008;
+    
+    // Capacity leak - random particles fall off, never return
+    // Higher chance at edges (particles near z extremes)
+    const edgeFactor = Math.abs(posArray[iz]) / 50;
+    const leakChance = 0.00015 + edgeFactor * 0.0003;
+    
+    if (Math.random() < leakChance) {
+      // Begin falling - mark as leaked
+      velocities[iy] -= 0.5;
     }
     
-    // Subtle vertical oscillation (conveyor vibration)
-    velocities[iy] += Math.sin(time * 8 + i * 0.01) * 0.02 * motionScale;
+    // Slight inward pull to keep belt cohesion
+    velocities[iz] -= posArray[iz] * 0.001;
+    
   } else {
-    // Falling particles - gravity + slow drift
-    velocities[iy] -= 0.08 * motionScale; // Gravity
-    velocities[ix] += (Math.random() - 0.5) * 0.1; // Tumble
-    velocities[iz] += (Math.random() - 0.5) * 0.1;
+    // LEAKED PARTICLES - slow descent into oblivion, no return
+    // Gentle gravity - drifting down, slowing
+    velocities[iy] -= 0.025 * motionScale;
     
-    // Respawn at top when fallen too far (cycle continues)
-    if (posArray[iy] < -150) {
-      velocities[iy] += 200; // Jump back to belt
-      velocities[ix] = -beltWidth + Math.random() * 20; // Start at left edge
+    // Horizontal drift slows (energy draining)
+    velocities[ix] *= 0.995;
+    
+    // Slight outward drift (dispersing)
+    velocities[iz] += (posArray[iz] > 0 ? 1 : -1) * 0.005;
+    
+    // Particles fade by moving further down and slowing
+    // They accumulate at the bottom, dimmer (further from camera)
+    if (posArray[iy] < -200) {
+      // Settle at bottom - nearly still
+      velocities[iy] *= 0.9;
+      velocities[ix] *= 0.95;
+      velocities[iz] *= 0.95;
     }
   }
   break;

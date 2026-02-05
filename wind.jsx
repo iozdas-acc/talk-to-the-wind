@@ -43,71 +43,43 @@ const shapeGenerators = {
     return positions.slice(0, count);
   },
 
-  // Multiple workers - 3 human figures showing collective labor/fatigue
-  workers: (count) => {
+  // Conveyor belt - endless loop, particles peeling off (capacity drain)
+  conveyor: (count) => {
     const positions = [];
-    const offsets = [-120, 0, 120]; // 3 figures spaced horizontally
-    const scale = 0.7; // Slightly smaller to fit 3
-    const particlesPerFigure = Math.floor(count / 3);
+    const beltWidth = 280;
+    const beltHeight = 35;
+    const lanes = 4;
+    const laneSpacing = 30;
     
-    offsets.forEach((offsetX, figureIndex) => {
-      const figureCount = figureIndex === 1 ? particlesPerFigure + (count % 3) : particlesPerFigure;
-      
-      // Head
-      for (let i = 0; i < figureCount * 0.12; i++) {
-        const theta = Math.random() * Math.PI * 2;
-        const phi = Math.acos(2 * Math.random() - 1);
-        const r = (25 + Math.random() * 4) * scale;
-        positions.push([
-          r * Math.sin(phi) * Math.cos(theta) + offsetX,
-          r * Math.sin(phi) * Math.sin(theta) + 100 * scale,
-          r * Math.cos(phi)
-        ]);
-      }
-      // Torso
-      for (let i = 0; i < figureCount * 0.35; i++) {
-        const y = Math.random() * 70 * scale + 15 * scale;
-        const angle = Math.random() * Math.PI * 2;
-        const radiusX = (30 + Math.sin(y * 0.07) * 8) * scale;
-        positions.push([
-          Math.cos(angle) * radiusX + offsetX,
-          y,
-          Math.sin(angle) * 18 * scale
-        ]);
-      }
-      // Arms (slightly drooped to show fatigue)
-      for (let i = 0; i < figureCount * 0.2; i++) {
-        const t = Math.random();
-        const side = i < figureCount * 0.1 ? -1 : 1;
-        const armDroop = t * 0.3; // Arms droop more at the ends
-        positions.push([
-          side * (40 + t * 50) * scale + offsetX,
-          (65 - t * 45 - armDroop * 20) * scale, // Drooping arms
-          (Math.random() - 0.5) * 15 * scale
-        ]);
-      }
-      // Legs
-      for (let i = 0; i < figureCount * 0.3; i++) {
-        const t = Math.random();
-        const side = i < figureCount * 0.15 ? -1 : 1;
-        positions.push([
-          side * 16 * scale + offsetX,
-          (15 - t * 95) * scale,
-          (Math.random() - 0.5) * 18 * scale
-        ]);
-      }
-    });
+    // Main belt particles - horizontal stream
+    const beltParticles = Math.floor(count * 0.65);
+    for (let i = 0; i < beltParticles; i++) {
+      const lane = Math.floor(Math.random() * lanes);
+      const laneZ = (lane - (lanes - 1) / 2) * laneSpacing;
+      const x = (Math.random() - 0.5) * beltWidth;
+      const y = 30 + (Math.random() - 0.5) * beltHeight; // Centered at y=30
+      positions.push([x, y, laneZ]);
+    }
     
-    // Fill remaining with scattered particles (representing dissipating energy)
+    // Particles falling off the belt (capacity loss)
+    const fallingParticles = Math.floor(count * 0.25);
+    for (let i = 0; i < fallingParticles; i++) {
+      const fallProgress = Math.random();
+      const x = (Math.random() - 0.5) * beltWidth * 0.8;
+      const y = 30 - 20 - fallProgress * 120; // Falling below belt
+      const z = (Math.random() - 0.5) * laneSpacing * lanes;
+      positions.push([x, y, z]);
+    }
+    
+    // Accumulated "waste" at bottom
     while (positions.length < count) {
-      const figureIndex = Math.floor(Math.random() * 3);
-      const offsetX = offsets[figureIndex];
       positions.push([
-        (Math.random() - 0.5) * 80 + offsetX,
-        Math.random() * 140 - 60,
-        (Math.random() - 0.5) * 50
+        (Math.random() - 0.5) * beltWidth * 0.6,
+        -100 - Math.random() * 40,
+        (Math.random() - 0.5) * laneSpacing * lanes * 0.8
       ]);
     }
+    
     return positions.slice(0, count);
   },
 
@@ -598,8 +570,8 @@ const leadershipThemes = [
     title: 'Procurement capacity consumed',
     subtitle: 'by low-value, manual work',
     description: 'Manual admin, tracking, approvals, failed self-sourcing and compliance activity consume capacity, limiting focus on strategic value and supplier management.',
-    shape: 'workers',
-    motion: 'fragment',
+    shape: 'conveyor',
+    motion: 'treadmill',
     color: 'maroon',
     row: 'strategic'
   },
@@ -1773,35 +1745,46 @@ case 'orbit':
   velocities[iz] += (Math.sin(orbitAngle) * orbitDist - posArray[iz]) * 0.02;
   velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
   break;
-  case 'fragment':
-  // Particles periodically drift outward then slowly return - energy drain effect
-  const fragmentCycle = Math.sin(time * 0.3 + i * 0.0002); // Slow wave per particle
-  const fragmentPhase = Math.sin(time * 0.5 + i * 0.001);
-  const isExhaling = fragmentCycle > 0; // Exhale = drift out, inhale = return
+  case 'treadmill':
+  // Endless horizontal motion - particles loop, some fall off
+  const beltSpeed = 0.8 * motionScale;
+  const beltWidth = 140; // Half-width for wrap detection
+  const fallThreshold = -30; // Y level where particles are "falling"
   
-  // Get direction from center of the figure this particle belongs to
-  const figureOffset = posArray[ix] < -60 ? -120 : posArray[ix] > 60 ? 120 : 0;
-  const localX = posArray[ix] - figureOffset;
-  const localDist = Math.sqrt(localX ** 2 + posArray[iy] ** 2 + posArray[iz] ** 2);
+  // Check if particle is on the belt or falling
+  const isOnBelt = posArray[iy] > fallThreshold;
   
-  if (localDist > 0) {
-    if (isExhaling) {
-      // Drift outward and slightly downward (fatigue/drain)
-      const exhaustion = 0.08 * motionScale * (0.5 + Math.random() * 0.5);
-      velocities[ix] += (localX / localDist) * exhaustion * fragmentPhase;
-      velocities[iy] += ((posArray[iy] / localDist) * exhaustion - 0.02) * fragmentPhase; // Slight droop
-      velocities[iz] += (posArray[iz] / localDist) * exhaustion * fragmentPhase;
-    } else {
-      // Slowly return but never fully recover (persistent drain)
-      const recovery = 0.03 * motionScale;
-      velocities[ix] -= (localX / localDist) * recovery * 0.5;
-      velocities[iy] -= ((posArray[iy] / localDist) * recovery * 0.3);
-      velocities[iz] -= (posArray[iz] / localDist) * recovery * 0.5;
+  if (isOnBelt) {
+    // Move forward on the belt
+    velocities[ix] += beltSpeed;
+    
+    // Wrap around when reaching edge (creates loop illusion)
+    if (posArray[ix] > beltWidth) {
+      // Teleport to other side (handled via large negative velocity)
+      velocities[ix] -= beltWidth * 2.5;
+    }
+    
+    // Random chance to "fall off" - capacity loss
+    const fallChance = 0.0004 + (Math.abs(posArray[iz]) > 40 ? 0.001 : 0); // Edge particles fall more
+    if (Math.random() < fallChance) {
+      velocities[iy] -= 2.0; // Start falling
+      velocities[ix] += (Math.random() - 0.5) * 0.5; // Slight sideways drift
+    }
+    
+    // Subtle vertical oscillation (conveyor vibration)
+    velocities[iy] += Math.sin(time * 8 + i * 0.01) * 0.02 * motionScale;
+  } else {
+    // Falling particles - gravity + slow drift
+    velocities[iy] -= 0.08 * motionScale; // Gravity
+    velocities[ix] += (Math.random() - 0.5) * 0.1; // Tumble
+    velocities[iz] += (Math.random() - 0.5) * 0.1;
+    
+    // Respawn at top when fallen too far (cycle continues)
+    if (posArray[iy] < -150) {
+      velocities[iy] += 200; // Jump back to belt
+      velocities[ix] = -beltWidth + Math.random() * 20; // Start at left edge
     }
   }
-  // Add subtle trembling (stress/strain)
-  velocities[ix] += (Math.random() - 0.5) * 0.04 * motionScale;
-  velocities[iy] += (Math.random() - 0.5) * 0.03 * motionScale;
   break;
   default: // drift - gentle floating movement
               const driftPhase = i * 0.001;

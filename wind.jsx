@@ -1750,19 +1750,9 @@ case 'orbit':
   velocities[iy] += Math.sin(time + i * 0.005) * 0.015 * motionScale;
   break;
 case 'futile': {
-  // Failed formation - sphere ALMOST forms then collapses, repeat
-  // Must be visibly frustrating - never completes
+  // PURE CHAOS - sphere NEVER forms, constant violent turbulence
   
   const fTargetRadius = 85;
-  const fCycleLength = 4.0; // Faster cycles = more visible failure
-  const fCycleTime = time % fCycleLength;
-  const fCyclePhase = fCycleTime / fCycleLength;
-  
-  // Fatigue makes later attempts weaker
-  const fFatiguePeriod = 30;
-  const fFatigueLevel = (time % fFatiguePeriod) / fFatiguePeriod;
-  const fFatigueMult = 1.0 - fFatigueLevel * 0.6; // Degrades to 40%
-  
   const fDist = Math.sqrt(posArray[ix] ** 2 + (posArray[iy] - 30) ** 2 + posArray[iz] ** 2);
   
   const fNx = fDist > 0.1 ? posArray[ix] / fDist : 0;
@@ -1773,65 +1763,52 @@ case 'futile': {
   const fTy = fNy * fTargetRadius + 30;
   const fTz = fNz * fTargetRadius;
   
-  // Phase 0.0-0.4: FORMING (not enough time to complete!)
-  // Phase 0.4-0.7: DISRUPTION (aggressive scatter)
-  // Phase 0.7-1.0: DRIFT (demoralized floating)
+  // VERY WEAK pull toward sphere (barely trying)
+  const formStrength = 0.008 * motionScale;
+  velocities[ix] += (fTx - posArray[ix]) * formStrength;
+  velocities[iy] += (fTy - posArray[iy]) * formStrength;
+  velocities[iz] += (fTz - posArray[iz]) * formStrength;
   
-  if (fCyclePhase < 0.4) {
-    // FORMING - pull toward sphere, but won't finish in time
-    const formProgress = fCyclePhase / 0.4;
-    const formStrength = 0.05 * fFatigueMult * motionScale;
-    const ease = Math.sin(formProgress * Math.PI * 0.5);
-    
-    velocities[ix] += (fTx - posArray[ix]) * formStrength * ease;
-    velocities[iy] += (fTy - posArray[iy]) * formStrength * ease;
-    velocities[iz] += (fTz - posArray[iz]) * formStrength * ease;
-    
-    // Instability even while forming
-    const wobble = 0.025;
-    velocities[ix] += Math.sin(time * 4 + i * 0.01) * wobble;
-    velocities[iy] += Math.cos(time * 3.5 + i * 0.013) * wobble;
-    velocities[iz] += Math.sin(time * 4.2 + i * 0.017) * wobble;
-    
-  } else if (fCyclePhase < 0.7) {
-    // DISRUPTION - aggressive scatter, sphere breaks apart
-    const disruptProgress = (fCyclePhase - 0.4) / 0.3;
-    const disruptPeak = Math.sin(disruptProgress * Math.PI);
-    const disruptStrength = disruptPeak * 0.4 * motionScale; // Much stronger!
-    
-    // Chaotic per-particle displacement
-    const fpx = Math.sin(i * 0.019 + time * 3.5);
-    const fpy = Math.sin(i * 0.027 + time * 4.1);
-    const fpz = Math.sin(i * 0.023 + time * 3.8);
-    
-    velocities[ix] += fpx * disruptStrength;
-    velocities[iy] += fpy * disruptStrength;
-    velocities[iz] += fpz * disruptStrength;
-    
-    // Strong outward explosion
-    const explodeStrength = disruptPeak * 0.5 * (1 + fFatigueLevel) * motionScale;
-    velocities[ix] += fNx * explodeStrength;
-    velocities[iy] += fNy * explodeStrength;
-    velocities[iz] += fNz * explodeStrength;
-    
-  } else {
-    // DRIFT - defeated floating, barely trying
-    const driftStrength = 0.005 * fFatigueMult * motionScale;
-    velocities[ix] += (fTx - posArray[ix]) * driftStrength;
-    velocities[iy] += (fTy - posArray[iy]) * driftStrength;
-    velocities[iz] += (fTz - posArray[iz]) * driftStrength;
-    
-    // Tired random drift
-    velocities[ix] += (Math.random() - 0.5) * 0.02;
-    velocities[iy] += (Math.random() - 0.5) * 0.02;
-    velocities[iz] += (Math.random() - 0.5) * 0.02;
+  // OVERWHELMING CHAOS - multiple noise layers
+  const c1 = 0.25 * motionScale; // Strong fast noise
+  const c2 = 0.18 * motionScale; // Medium noise
+  const c3 = 0.12 * motionScale; // Slow rolling chaos
+  
+  // Fast turbulence
+  velocities[ix] += Math.sin(i * 0.013 + time * 6.0) * c1;
+  velocities[iy] += Math.cos(i * 0.017 + time * 5.5) * c1;
+  velocities[iz] += Math.sin(i * 0.011 + time * 6.3) * c1;
+  
+  // Medium turbulence (different frequencies)
+  velocities[ix] += Math.cos(i * 0.029 + time * 3.2) * c2;
+  velocities[iy] += Math.sin(i * 0.023 + time * 2.8) * c2;
+  velocities[iz] += Math.cos(i * 0.031 + time * 3.5) * c2;
+  
+  // Slow chaotic waves
+  velocities[ix] += Math.sin(i * 0.007 + time * 1.1) * c3;
+  velocities[iy] += Math.cos(i * 0.009 + time * 0.9) * c3;
+  velocities[iz] += Math.sin(i * 0.005 + time * 1.3) * c3;
+  
+  // Random violent bursts (2% chance per particle per frame)
+  if (Math.random() < 0.02) {
+    velocities[ix] += (Math.random() - 0.5) * 2.5;
+    velocities[iy] += (Math.random() - 0.5) * 2.5;
+    velocities[iz] += (Math.random() - 0.5) * 2.5;
   }
   
-  // Less damping = more chaotic movement
-  const fDamping = 0.95;
-  velocities[ix] *= fDamping;
-  velocities[iy] *= fDamping;
-  velocities[iz] *= fDamping;
+  // Periodic explosion outward (every 2 seconds)
+  const expCycle = (time % 2.0) / 2.0;
+  if (expCycle < 0.2) {
+    const expPower = Math.sin(expCycle / 0.2 * Math.PI) * 0.6 * motionScale;
+    velocities[ix] += fNx * expPower;
+    velocities[iy] += fNy * expPower;
+    velocities[iz] += fNz * expPower;
+  }
+  
+  // Minimal damping - stay wild
+  velocities[ix] *= 0.94;
+  velocities[iy] *= 0.94;
+  velocities[iz] *= 0.94;
   break;
 }
   default: // drift - gentle floating movement

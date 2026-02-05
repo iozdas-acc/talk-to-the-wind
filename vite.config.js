@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Use '/' for Vercel, '/talk-to-the-wind/' for GitHub Pages
-const base = process.env.VERCEL ? '/' : '/talk-to-the-wind/'
+// Use '/' for most environments, '/talk-to-the-wind/' only for GitHub Pages
+const base = process.env.GITHUB_PAGES ? '/talk-to-the-wind/' : '/'
 
 export default defineConfig({
   plugins: [react()],

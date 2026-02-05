@@ -2002,7 +2002,7 @@ case 'orbit':
             position: 'absolute',
             inset: 0,
             zIndex: 10,
-            background: 'rgba(0,0,0,0.85)',
+            background: 'rgba(3,3,6,0.95)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -2010,15 +2010,15 @@ case 'orbit':
             padding: isMobile ? '16px' : '32px',
             animation: 'fadeIn 0.3s ease-out'
           }}>
-            <h2 style={{ 
-              fontSize: isMobile ? '14px' : '18px', 
-              marginBottom: '8px', 
-              fontWeight: '400',
-              letterSpacing: '2px',
-              color: '#fff'
-            }}>
-              SELECT A THEME TO EXPLORE
-            </h2>
+<h2 style={{
+  fontSize: isMobile ? '14px' : '18px',
+  marginBottom: '8px',
+  fontWeight: '400',
+  letterSpacing: '2px',
+  color: '#fff'
+  }}>
+  SELECT A THEME TO EXPLORE
+  </h2>
             <p style={{ 
               fontSize: '11px', 
               color: '#666', 

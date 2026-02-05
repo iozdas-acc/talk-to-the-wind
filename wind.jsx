@@ -1841,20 +1841,22 @@ case 'futile': {
             }
           }
           
-          // Return to target - elastic spring effect
-          const returnStrength = 0.004 + (1 - vel) * 0.006;
-          velocities[ix] += (targetPositions[ix] - posArray[ix]) * returnStrength;
-          velocities[iy] += (targetPositions[iy] - posArray[iy]) * returnStrength;
-          velocities[iz] += (targetPositions[iz] - posArray[iz]) * returnStrength;
+          // Return to target - elastic spring effect (skip for 'futile' motion)
+          if (motion !== 'futile') {
+            const returnStrength = 0.004 + (1 - vel) * 0.006;
+            velocities[ix] += (targetPositions[ix] - posArray[ix]) * returnStrength;
+            velocities[iy] += (targetPositions[iy] - posArray[iy]) * returnStrength;
+            velocities[iz] += (targetPositions[iz] - posArray[iz]) * returnStrength;
+          }
           
           // Damping - allows more flow with higher velocity
-          const damping = 0.94 + vel * 0.03;
+          const damping = motion === 'futile' ? 0.92 : 0.94 + vel * 0.03;
           velocities[ix] *= damping;
           velocities[iy] *= damping;
           velocities[iz] *= damping;
           
-          // Clamp velocities to prevent extreme movement
-          const maxVel = 2;
+          // Clamp velocities (higher limit for futile to allow chaos)
+          const maxVel = motion === 'futile' ? 5 : 2;
           velocities[ix] = Math.max(-maxVel, Math.min(maxVel, velocities[ix]));
           velocities[iy] = Math.max(-maxVel, Math.min(maxVel, velocities[iy]));
           velocities[iz] = Math.max(-maxVel, Math.min(maxVel, velocities[iz]));

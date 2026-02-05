@@ -1026,8 +1026,8 @@ export default function TalkToTheWind() {
     }
     
     // Apply motion
-    if (sceneRef.current) {
-      stateRef.current.motion = theme.motion;
+    if (stateRef.current) {
+      stateRef.current.motionPreset = theme.motion;
     }
   }, []);
 
@@ -1050,8 +1050,8 @@ export default function TalkToTheWind() {
     if (sceneRef.current?.morphTo) {
       sceneRef.current.morphTo(theme.shape, theme.color);
     }
-    if (sceneRef.current) {
-      stateRef.current.motion = theme.motion;
+    if (stateRef.current) {
+      stateRef.current.motionPreset = theme.motion;
     }
   }, []);
 
@@ -1091,7 +1091,7 @@ export default function TalkToTheWind() {
           sceneRef.current.morphTo(theme.shape, theme.color);
         }
         if (stateRef.current) {
-          stateRef.current.motion = theme.motion;
+          stateRef.current.motionPreset = theme.motion;
         }
         return nextIndex;
       });
@@ -1842,7 +1842,7 @@ case 'futile': {
           }
           
           // Return to target - elastic spring effect (skip for 'futile' motion)
-          if (motion !== 'futile') {
+          if (state.motionPreset !== 'futile') {
             const returnStrength = 0.004 + (1 - vel) * 0.006;
             velocities[ix] += (targetPositions[ix] - posArray[ix]) * returnStrength;
             velocities[iy] += (targetPositions[iy] - posArray[iy]) * returnStrength;
@@ -1850,13 +1850,13 @@ case 'futile': {
           }
           
           // Damping - allows more flow with higher velocity
-          const damping = motion === 'futile' ? 0.92 : 0.94 + vel * 0.03;
+          const damping = state.motionPreset === 'futile' ? 0.92 : 0.94 + vel * 0.03;
           velocities[ix] *= damping;
           velocities[iy] *= damping;
           velocities[iz] *= damping;
           
           // Clamp velocities (higher limit for futile to allow chaos)
-          const maxVel = motion === 'futile' ? 5 : 2;
+          const maxVel = state.motionPreset === 'futile' ? 5 : 2;
           velocities[ix] = Math.max(-maxVel, Math.min(maxVel, velocities[ix]));
           velocities[iy] = Math.max(-maxVel, Math.min(maxVel, velocities[iy]));
           velocities[iz] = Math.max(-maxVel, Math.min(maxVel, velocities[iz]));

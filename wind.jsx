@@ -657,6 +657,9 @@ export default function TalkToTheWind() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState(null);
   const [showThemeSelector, setShowThemeSelector] = useState(true);
+  const [isAutoplay, setIsAutoplay] = useState(false);
+  const [autoplayInterval, setAutoplayInterval] = useState(7000);
+  const [activeThemeIndex, setActiveThemeIndex] = useState(0);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isListeningVoice, setIsListeningVoice] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
@@ -963,8 +966,11 @@ export default function TalkToTheWind() {
     }
   }, [handleSubmit]);
 
-  // Handle theme selection
+  // Handle theme selection (manual click pauses autoplay)
   const selectTheme = useCallback((theme) => {
+    const index = leadershipThemes.findIndex(t => t.id === theme.id);
+    setIsAutoplay(false); // Pause autoplay on manual selection
+    setActiveThemeIndex(index);
     setSelectedTheme(theme);
     setShowThemeSelector(false);
     setCurrentShape(theme.shape);
@@ -985,7 +991,70 @@ export default function TalkToTheWind() {
   const backToSelector = useCallback(() => {
     setShowThemeSelector(true);
     setSelectedTheme(null);
+    setIsAutoplay(false);
   }, []);
+
+  // Apply theme by index (used by autoplay and manual selection)
+  const applyThemeByIndex = useCallback((index) => {
+    const theme = leadershipThemes[index];
+    setActiveThemeIndex(index);
+    setSelectedTheme(theme);
+    setShowThemeSelector(false);
+    setCurrentShape(theme.shape);
+    setCurrentMood(theme.color);
+    
+    if (sceneRef.current?.morphTo) {
+      sceneRef.current.morphTo(theme.shape, theme.color);
+    }
+    if (sceneRef.current) {
+      stateRef.current.motion = theme.motion;
+    }
+  }, []);
+
+  // Next/Prev theme navigation
+  const nextTheme = useCallback(() => {
+    const nextIndex = (activeThemeIndex + 1) % leadershipThemes.length;
+    applyThemeByIndex(nextIndex);
+  }, [activeThemeIndex, applyThemeByIndex]);
+
+  const prevTheme = useCallback(() => {
+    const prevIndex = (activeThemeIndex - 1 + leadershipThemes.length) % leadershipThemes.length;
+    applyThemeByIndex(prevIndex);
+  }, [activeThemeIndex, applyThemeByIndex]);
+
+  // Toggle autoplay
+  const toggleAutoplay = useCallback(() => {
+    if (!isAutoplay && showThemeSelector) {
+      // Start autoplay from first theme if on selector
+      applyThemeByIndex(0);
+    }
+    setIsAutoplay(prev => !prev);
+  }, [isAutoplay, showThemeSelector, applyThemeByIndex]);
+
+  // Autoplay timer effect
+  useEffect(() => {
+    if (!isAutoplay) return;
+    
+    const timer = setInterval(() => {
+      setActiveThemeIndex(prev => {
+        const nextIndex = (prev + 1) % leadershipThemes.length;
+        const theme = leadershipThemes[nextIndex];
+        setSelectedTheme(theme);
+        setCurrentShape(theme.shape);
+        setCurrentMood(theme.color);
+        
+        if (sceneRef.current?.morphTo) {
+          sceneRef.current.morphTo(theme.shape, theme.color);
+        }
+        if (stateRef.current) {
+          stateRef.current.motion = theme.motion;
+        }
+        return nextIndex;
+      });
+    }, autoplayInterval);
+
+    return () => clearInterval(timer);
+  }, [isAutoplay, autoplayInterval]);
 
   // Refs for voice recognition
   const pendingTranscriptRef = useRef('');
@@ -1825,11 +1894,30 @@ export default function TalkToTheWind() {
             <p style={{ 
               fontSize: '11px', 
               color: '#666', 
-              marginBottom: isMobile ? '16px' : '32px',
+              marginBottom: '12px',
               textAlign: 'center'
             }}>
               Click any theme to see its particle visualization
             </p>
+            <button
+              onClick={toggleAutoplay}
+              style={{
+                background: 'rgba(139, 58, 58, 0.2)',
+                border: '1px solid #8b3a3a',
+                borderRadius: '4px',
+                padding: '10px 24px',
+                cursor: 'pointer',
+                color: '#e0e0e0',
+                fontSize: '11px',
+                letterSpacing: '1px',
+                transition: 'all 0.2s',
+                marginBottom: isMobile ? '16px' : '24px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139, 58, 58, 0.4)'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139, 58, 58, 0.2)'}
+            >
+              START PRESENTATION
+            </button>
             
             {/* Strategic Row (Maroon) */}
             <div style={{ marginBottom: '16px', width: '100%', maxWidth: '900px' }}>
@@ -2001,34 +2089,131 @@ export default function TalkToTheWind() {
           </div>
         )}
 
-        {/* Back button when viewing theme */}
+        {/* Controls when viewing theme */}
         {!showThemeSelector && (
-          <button
-            onClick={backToSelector}
-            style={{
-              position: 'absolute',
-              top: '16px',
-              left: '16px',
-              zIndex: 5,
-              background: 'rgba(0,0,0,0.6)',
-              border: '1px solid #444',
-              borderRadius: '4px',
-              padding: '8px 16px',
-              cursor: 'pointer',
-              color: '#e0e0e0',
-              fontSize: '11px',
-              letterSpacing: '1px',
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
-            }}
-          >
-            BACK TO THEMES
-          </button>
+          <div style={{
+            position: 'absolute',
+            top: '16px',
+            left: '16px',
+            right: '16px',
+            zIndex: 5,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start',
+            pointerEvents: 'none'
+          }}>
+            {/* Left: Back button */}
+            <button
+              onClick={backToSelector}
+              style={{
+                background: 'rgba(0,0,0,0.6)',
+                border: '1px solid #444',
+                borderRadius: '4px',
+                padding: '8px 16px',
+                cursor: 'pointer',
+                color: '#e0e0e0',
+                fontSize: '11px',
+                letterSpacing: '1px',
+                transition: 'all 0.2s',
+                pointerEvents: 'auto'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(0,0,0,0.6)';
+              }}
+            >
+              BACK TO THEMES
+            </button>
+
+            {/* Right: Playback controls */}
+            <div style={{
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center',
+              pointerEvents: 'auto'
+            }}>
+              {/* Prev button */}
+              <button
+                onClick={prevTheme}
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+              >
+                {'<'}
+              </button>
+
+              {/* Play/Pause button */}
+              <button
+                onClick={toggleAutoplay}
+                style={{
+                  background: isAutoplay ? 'rgba(139, 58, 58, 0.4)' : 'rgba(0,0,0,0.6)',
+                  border: `1px solid ${isAutoplay ? '#8b3a3a' : '#444'}`,
+                  borderRadius: '4px',
+                  padding: '8px 16px',
+                  cursor: 'pointer',
+                  color: '#e0e0e0',
+                  fontSize: '11px',
+                  letterSpacing: '1px',
+                  transition: 'all 0.2s',
+                  minWidth: '80px'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = isAutoplay ? 'rgba(139, 58, 58, 0.6)' : 'rgba(255,255,255,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = isAutoplay ? 'rgba(139, 58, 58, 0.4)' : 'rgba(0,0,0,0.6)'}
+              >
+                {isAutoplay ? 'PAUSE' : 'PLAY'}
+              </button>
+
+              {/* Next button */}
+              <button
+                onClick={nextTheme}
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  color: '#e0e0e0',
+                  fontSize: '14px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(0,0,0,0.6)'}
+              >
+                {'>'}
+              </button>
+
+              {/* Interval selector */}
+              <select
+                value={autoplayInterval}
+                onChange={(e) => setAutoplayInterval(Number(e.target.value))}
+                style={{
+                  background: 'rgba(0,0,0,0.6)',
+                  border: '1px solid #444',
+                  borderRadius: '4px',
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  color: '#e0e0e0',
+                  fontSize: '11px',
+                  outline: 'none'
+                }}
+              >
+                <option value={5000}>5s</option>
+                <option value={7000}>7s</option>
+                <option value={10000}>10s</option>
+              </select>
+            </div>
+          </div>
         )}
       </main>
 
